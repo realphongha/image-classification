@@ -1,0 +1,77 @@
+gpus: "0"
+workers: 2
+device: "cuda"
+
+cudnn:
+  benchmark: true
+  deterministic: true
+  enabled: true
+
+data:
+  name: cifar100
+  input_w: 224
+  input_h: 224
+  cls: ['apple', 'aquarium_fish', 'baby', 'bear', 'beaver', 'bed', 'bee', 'beetle', 'bicycle', 'bottle', 'bowl', 'boy', 'bridge', 'bus', 'butterfly', 'camel', 'can', 'castle', 'caterpillar', 'cattle', 'chair', 'chimpanzee', 'clock', 'cloud', 'cockroach', 'couch', 'crab', 'crocodile', 'cup', 'dinosaur', 'dolphin', 'elephant', 'flatfish', 'forest', 'fox', 'girl', 'hamster', 'house', 'kangaroo', 'keyboard', 'lamp', 'lawn_mower', 'leopard', 'lion', 'lizard', 'lobster', 'man', 'maple_tree', 'motorcycle', 'mountain', 'mouse', 'mushroom', 'oak_tree', 'orange', 'orchid', 'otter', 'palm_tree', 'pear', 'pickup_truck', 'pine_tree', 'plain', 'plate', 'poppy', 'porcupine', 'possum', 'rabbit', 'raccoon', 'ray', 'road', 'rocket', 'rose', 'sea', 'seal', 'shark', 'shrew', 'skunk', 'skyscraper', 'snail', 'snake', 'spider', 'squirrel', 'streetcar', 'sunflower' , 'sweet_pepper', 'table', 'tank', 'telephone', 'television', 'tiger', 'tractor', 'train', 'trout', 'tulip', 'turtle', 'wardrobe', 'whale', 'willow_tree', 'wolf', 'woman', 'worm']
+  train_path: ./data/cifar100/train
+  val_path: ./data/cifar100/val
+  test_path: ./data/cifar100/val
+  img_ext: [".jpg",]
+  augmentation:
+    autoaug:
+      prob: 0.5
+      args:
+        fill: 127
+    grayscale:
+      prob: 0.05
+    # gaussian_blur:
+    #   prob: 0.05
+    #   args:
+    #     kernel_size: [5, 9]
+    #     sigma: [0.1, 5.0]
+    perspective:
+      args:
+        p: 0.05
+        distortion_scale: 0.5
+        fill: 127
+model:
+  backbone:
+    name: mobilenetv3
+    mobilenetv3:
+      size: small
+      pretrained: true
+  neck:
+    name: gap
+    gap:
+  head:
+    name: stacked_linear
+    stacked_linear:
+      hidden_channel: 1024  # 1024 - small, 1280 - large
+      activation: hardswish
+      dropout_rate: 0.2
+train:
+  compile: default
+  save_all_epochs: false
+  auto_resume: true
+  pretrained:
+  epochs: 50
+  batch_size: 64
+  freeze:
+  optimizer:
+    name: adamw
+    adamw:
+      lr: 0.001
+      weight_decay: 0.0001
+  lr_scheduler:
+    name: cosine
+    warmup: 3
+    cosine:
+      cycles: 2.0
+  loss:
+    name: ce
+    ce:
+      weighted: false
+  early_stop:
+
+test:
+  metric: accuracy
+  batch_size: 32
