@@ -32,19 +32,20 @@ class ResizeWithPad:
         ratio_f = self.w / self.h
         ratio_1 = w_1 / h_1
 
-        # check if the original and final aspect ratios are the same within a margin
-        if round(ratio_1, 2) != round(ratio_f, 2):
-            # padding to preserve aspect ratio
-            hp = int(w_1/ratio_f - h_1)
-            wp = int(ratio_f * h_1 - w_1)
-            if hp > 0 and wp < 0:
-                hp = hp // 2
-                image = F.pad(image, (0, hp, 0, hp), self.fill, "constant")
-                return F.resize(image, [self.h, self.w])
-            elif hp < 0 and wp > 0:
-                wp = wp // 2
-                image = F.pad(image, (wp, 0, wp, 0), self.fill, "constant")
-                return F.resize(image, [self.h, self.w])
-        else:
-            return F.resize(image, [self.h, self.w])
+        if round(ratio_1, 2) > round(ratio_f, 2):
+            # Image is too wide → pad height
+            new_h = int(w_1 / ratio_f)
+            pad = new_h - h_1
+            pad_top = pad // 2
+            pad_bottom = pad - pad_top
+            image = F.pad(image, (0, pad_top, 0, pad_bottom), fill=self.fill)
+        elif round(ratio_1, 2) < round(ratio_f, 2):
+            # Image is too tall → pad width
+            new_w = int(h_1 * ratio_f)
+            pad = new_w - w_1
+            pad_left = pad // 2
+            pad_right = pad - pad_left
+            image = F.pad(image, (pad_left, 0, pad_right, 0), fill=self.fill)
+
+        return F.resize(image, [self.h, self.w])
 

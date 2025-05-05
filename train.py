@@ -174,18 +174,25 @@ def main(cfg, opt):
     if pretrained_path:
         load_checkpoint(model, pretrained_path, strict=False)
 
+    wait_for_unfreeze = False
     if cfg["train"]["freeze"]:
-        parts_to_freeze = cfg["model"]["freeze"].strip().split(",")
-        parts_to_freeze = [p.strip() for p in parts_to_freeze]
-        model.freeze(parts_to_freeze)
+        assert isinstance(cfg["train"]["freeze"], list)
+        model.freeze(cfg["train"]["freeze"])
+        wait_for_unfreeze = cfg["train"]["unfreeze_after"]
 
     compile = cfg["train"].get("compile", None)
-    if compile:
+    if compile and not wait_for_unfreeze:
         logging.info(f"Compiling model in {compile} mode...")
         model = torch.compile(model, mode=compile)
 
     for epoch in range(begin_epoch, epochs):
         logging.info(f"EPOCH {epoch}:")
+
+        if wait_for_unfreeze and epoch >= wait_for_unfreeze:
+            model.free(cfg["train"]["freeze"])
+            wait_for_unfreeze = False
+            logging.info(f"Compiling model in {compile} mode...")
+            model = torch.compile(model, mode=compile)
 
         # trains
         f1, acc, loss, conf_matrix = train(model, criterion, optimizer, train_loader, device)
@@ -233,7 +240,7 @@ def main(cfg, opt):
         draw_confusion_matrix(opt.exp_dir, best_conf_matrix)
 
     logging.info("Done training!")
-    logging.info("Best %s:" % metric, best_acc)
+    logging.info("Best %s: %.4f" % (metric, best_acc))
     logging.info(best_clf_report)
 
 

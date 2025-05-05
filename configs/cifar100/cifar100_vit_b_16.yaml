@@ -53,6 +53,8 @@ train:
   epochs: 20
   batch_size: 32
   freeze:
+  - backbone
+  unfreeze_after: 3
   optimizer:
     name: adamw
     adamw:
@@ -62,7 +64,7 @@ train:
     name: cosine
     warmup: 3
     cosine:
-      cycles: 2.0
+      cycles: 0.5
   loss:
     name: ce
     ce:

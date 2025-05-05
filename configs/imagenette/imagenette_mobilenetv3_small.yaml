@@ -38,7 +38,7 @@ model:
     name: mobilenetv3
     mobilenetv3:
       size: small
-      pretrained: true
+      pretrained: false
   neck:
     name: gap
     gap:
@@ -53,9 +53,10 @@ train:
   save_all_epochs: false
   auto_resume: true
   pretrained:
-  epochs: 30
+  epochs: 200
   batch_size: 64
   freeze:
+  unfreeze_after:
   optimizer:
     name: adamw
     adamw:
@@ -63,7 +64,7 @@ train:
       weight_decay: 0.0001
   lr_scheduler:
     name: cosine
-    warmup: 3
+    warmup: 10 
     cosine:
       cycles: 2.0
   loss:
