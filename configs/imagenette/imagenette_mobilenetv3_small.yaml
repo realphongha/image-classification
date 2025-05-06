@@ -18,8 +18,9 @@ data:
   img_ext: [".jpg",]
   augmentation:
     autoaug:
-      prob: 0.5
+      prob: 1.0
       args:
+        policy: IMAGENET
         fill: 127
     grayscale:
       prob: 0.05
@@ -66,7 +67,7 @@ train:
     name: cosine
     warmup: 10 
     cosine:
-      cycles: 2.0
+      cycles: 0.5
   loss:
     name: ce
     ce:

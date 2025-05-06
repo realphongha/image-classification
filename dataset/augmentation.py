@@ -10,6 +10,11 @@ def get_aug(cfg, is_train):
     pipeline = []
     if is_train:
         if aug_cfg.get("autoaug", None) and aug_cfg["autoaug"]["prob"] > random.random():
+            if "policy" in aug_cfg["autoaug"]["args"]:
+                policy = aug_cfg["autoaug"]["args"]["policy"]
+                if isinstance(policy, str):
+                    policy = eval("T.autoaugment.AutoAugmentPolicy." + policy)
+                    aug_cfg["autoaug"]["args"]["policy"] = policy
             pipeline.append(T.AutoAugment(**aug_cfg["autoaug"]["args"]))
         if aug_cfg.get("gaussian_blur", None) and aug_cfg["gaussian_blur"]["prob"] > random.random():
             pipeline.append(T.GaussianBlur(**aug_cfg["gaussian_blur"]["args"]))
