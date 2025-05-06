@@ -56,7 +56,7 @@ class Dataset(torch.utils.data.Dataset):
         # import os
         # import cv2
         # os.makedirs("runs/aug", exist_ok=True)
-        # cv2.imwrite(f"runs/aug/cls{label}-{index}.jpg", img)
+        # cv2.imwrite(f"runs/aug/{index}-{self.cls[label]}.jpg", img)
         img = (img/255.0 - self.mean) / self.std
         img = img.transpose([2, 0, 1])
         data = torch.Tensor(img)

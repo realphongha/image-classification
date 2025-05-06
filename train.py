@@ -39,9 +39,9 @@ def draw_confusion_matrix(output_path, conf_matrix):
 def train(model, criterion, optimizer, train_loader, device):
     logging.info("Training...")
     model.train()
-    losses = list()
-    pred = list()
-    gt = list()
+    losses = []
+    pred = []
+    gt = []
 
     for data, label in tqdm(train_loader):
         data = data.float().to(device)
@@ -64,7 +64,8 @@ def train(model, criterion, optimizer, train_loader, device):
     logging.info(f"Accuracy: {acc}")
     f1 = f1_score(gt, pred, average="macro")
     logging.info(f"Macro avg F1 score: {f1}")
-    logging.info(classification_report(gt, pred))
+    clf_report = classification_report(gt, pred)
+    logging.info(f"Classification report:\n {clf_report}")
     conf_matrix = confusion_matrix(gt, pred, normalize="true")
 
     return f1, acc, mean_loss, conf_matrix
@@ -73,9 +74,9 @@ def train(model, criterion, optimizer, train_loader, device):
 def evaluate(model, criterion, val_loader, device):
     logging.info("Evaluating...")
     model.eval()
-    losses = list()
-    pred = list()
-    gt = list()
+    losses = []
+    pred = []
+    gt = []
 
     for data, label in tqdm(val_loader):
         data = data.float().to(device)

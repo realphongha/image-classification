@@ -139,7 +139,7 @@ class ClassifierOnnx(ClassifierAbs):
         begin = time.time()
         np_outputs = self.ort_session.run(None, {self.input_name: inp})[0]
         self.update_perf("infer_batch", time.time()-begin)
-        clss, cls_probs = list(), list()
+        clss, cls_probs = [], []
         for np_output in np_outputs:
             cls, cls_prob = self._postprocess(np_output)
             clss.append(cls)
