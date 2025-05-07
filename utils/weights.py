@@ -46,3 +46,19 @@ def save_checkpoint(states, is_best, output_dir, save_all_epoches):
         logging.info("Saving best checkpoint to %s..." % os.path.join(output_dir, "best.pth"))
         torch.save(states, os.path.join(output_dir, "best.pth"))
 
+def simplify_checkpoint(path, out_path):
+    checkpoint = torch.load(path, weights_only=False)
+    state_dict = checkpoint["state_dict"]
+    torch.save(state_dict, out_path)
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", "--path", type=str, required=True)
+    parser.add_argument("-o", "--out-path", type=str, required=True)
+    args = parser.parse_args()
+
+    simplify_checkpoint(args.path, args.out_path)
+

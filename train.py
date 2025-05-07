@@ -242,7 +242,7 @@ def main(cfg, opt):
 
     logging.info("Done training!")
     logging.info("Best %s: %.4f" % (metric, best_acc))
-    logging.info(best_clf_report)
+    logging.info(f"Classification report:\n {best_clf_report}")
 
 
 def handle_args():
