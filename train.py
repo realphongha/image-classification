@@ -3,6 +3,7 @@ import argparse
 import logging
 import yaml
 import json
+import random
 
 import torch
 import numpy as np
@@ -13,7 +14,8 @@ import seaborn as sn
 import matplotlib.pyplot as plt
 import wandb
 from tqdm import tqdm
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, default_collate
+import torchvision.transforms.v2 as T
 
 from model.model import ClassificationModel
 from dataset.dataset import Dataset
@@ -36,39 +38,30 @@ def draw_confusion_matrix(output_path, conf_matrix):
     plt.close("all")
 
 
-def train(model, criterion, optimizer, train_loader, device):
+def train(model, criterion, optimizer, lr_scheduler, train_loader, device):
     logging.info("Training...")
     model.train()
     losses = []
-    pred = []
-    gt = []
 
     for data, label in tqdm(train_loader):
         data = data.float().to(device)
-        label = label.long().to(device)
+        if len(label.shape) == 1:
+            label = label.long().to(device)
+        else:
+            assert len(label.shape) == 2
+            label = label.float().to(device)
         optimizer.zero_grad()
         output = model(data)
         loss = criterion(output, label)
-        output_label = torch.max(output, 1).indices.cpu().detach().numpy()
-        gt_label = label.cpu().detach().numpy()
         losses.append(loss.item())
-        for i in range(output_label.shape[0]):
-            pred.append(round(output_label[i]))
-            gt.append(round(gt_label[i]))
         loss.backward()
         optimizer.step()
 
     mean_loss = np.mean(losses)
     logging.info(f"Loss: {mean_loss}")
-    acc = accuracy_score(gt, pred)
-    logging.info(f"Accuracy: {acc}")
-    f1 = f1_score(gt, pred, average="macro")
-    logging.info(f"Macro avg F1 score: {f1}")
-    clf_report = classification_report(gt, pred)
-    logging.info(f"Classification report:\n {clf_report}")
-    conf_matrix = confusion_matrix(gt, pred, normalize="true")
+    lr_scheduler.step()
 
-    return f1, acc, mean_loss, conf_matrix
+    return mean_loss
 
 
 def evaluate(model, criterion, val_loader, device):
@@ -104,6 +97,7 @@ def evaluate(model, criterion, val_loader, device):
 
 
 def main(cfg, opt):
+    # configs
     exp_name = cfg["data"]["name"] + "_" + os.path.split(opt.exp_dir)[-1]
     wandb.init(
         project="image-classification",
@@ -112,25 +106,41 @@ def main(cfg, opt):
     )
     init_cuda_cudnn(cfg)
     device = cfg["device"]
-
     os.makedirs(opt.exp_dir, exist_ok=True)
     setup_logger(os.path.join(opt.exp_dir, "train.log"))
     logging.info("Configs:")
     logging.info(cfg)
 
+    # init model
     model = ClassificationModel(cfg, training=True)
     model.to(device)
 
+    # datasets
     train_ds = Dataset(cfg["data"]["train_path"], True, cfg)
     val_ds = Dataset(cfg["data"]["val_path"], False, cfg)
+
+    cutmix = T.CutMix(num_classes=len(cfg["data"]["cls"]))
+    mixup = T.MixUp(num_classes=len(cfg["data"]["cls"]))
+    cutmix_or_mixup = T.RandomChoice([cutmix, mixup])
+
+    assert cfg["data"]["augmentation"]["cutmix_mixup"]["prob"] <= 0.0 or \
+           cfg["train"]["loss"]["name"] in ("ce", )
+    def collate_fn(batch):
+        if random.random() > cfg["data"]["augmentation"]["cutmix_mixup"]["prob"]:
+            return cutmix_or_mixup(*default_collate(batch))
+        return default_collate(batch)
+
     train_loader = DataLoader(train_ds, batch_size=cfg["train"]["batch_size"],
-                              shuffle=True, num_workers=cfg["workers"])
+                              shuffle=True, num_workers=cfg["workers"],
+                              collate_fn=collate_fn)
     val_loader = DataLoader(val_ds, batch_size=cfg["test"]["batch_size"],
                             shuffle=False,
                             num_workers=cfg["workers"])
 
+    # optimizer
     optimizer = get_optimizer(model, cfg["train"]["optimizer"])
 
+    # loss
     criterion = get_loss(cfg["train"]["loss"], device, train_ds.cls_count)
 
     metric = cfg["test"]["metric"]
@@ -143,9 +153,8 @@ def main(cfg, opt):
     best_conf_matrix = None
     train_loss = []
     val_loss = []
-    train_acc = []
-    val_acc = []
 
+    # load checkpoint
     if os.path.isdir(opt.exp_dir) and os.path.isfile(os.path.join(opt.exp_dir, "configs.txt")):
         ckpt_file = os.path.join(opt.exp_dir, "last.pth")
         assert os.path.isfile(ckpt_file), "Exp dir exists but no checkpoint found!"
@@ -154,7 +163,7 @@ def main(cfg, opt):
         checkpoint = torch.load(ckpt_file, map_location=device)
         begin_epoch = checkpoint['epoch']
         best_perf = checkpoint['perf']
-        best_acc, best_clf_report, best_conf_matrix, train_loss, val_loss, train_acc, val_acc = best_perf
+        best_acc, best_clf_report, best_conf_matrix, train_loss, val_loss = best_perf
         last_epoch = checkpoint['epoch']
         model.load_state_dict(checkpoint['state_dict'])
 
@@ -166,6 +175,7 @@ def main(cfg, opt):
             json.dump(cfg, output_file, indent=4)
 
     epochs = cfg["train"]["epochs"]
+    # scheduler
     lr_scheduler = get_scheduler(cfg["train"]["lr_scheduler"], optimizer,
                                  last_epoch, epochs)
 
@@ -175,17 +185,20 @@ def main(cfg, opt):
     if pretrained_path:
         load_checkpoint(model, pretrained_path, strict=False)
 
+    # freeze parts
     wait_for_unfreeze = False
     if cfg["train"]["freeze"]:
         assert isinstance(cfg["train"]["freeze"], list)
         model.freeze(cfg["train"]["freeze"])
         wait_for_unfreeze = cfg["train"]["unfreeze_after"]
 
+    # compiles model
     compile = cfg["train"].get("compile", None)
     if compile and not wait_for_unfreeze:
         logging.info(f"Compiling model in {compile} mode...")
         model = torch.compile(model, mode=compile)
 
+    # train loop
     for epoch in range(begin_epoch, epochs):
         logging.info(f"EPOCH {epoch}:")
 
@@ -196,14 +209,9 @@ def main(cfg, opt):
             model = torch.compile(model, mode=compile)
 
         # trains
-        f1, acc, loss, conf_matrix = train(model, criterion, optimizer, train_loader, device)
-        if metric == "accuracy":
-            m = acc
-        elif metric == "f1":
-            m = f1
-        train_acc.append(m)
+        loss = train(model, criterion, optimizer, lr_scheduler,
+                     train_loader, device)
         train_loss.append(loss)
-        lr_scheduler.step()
 
         # evaluates
         f1, acc, clf_report, loss, conf_matrix = evaluate(
@@ -212,7 +220,6 @@ def main(cfg, opt):
             m = acc
         elif metric == "f1":
             m = f1
-        val_acc.append(m)
         val_loss.append(loss)
         best_model = False
         if m > best_acc:
@@ -234,7 +241,7 @@ def main(cfg, opt):
         # saves checkpoint
         save_checkpoint({
             'epoch': epoch + 1,
-            'perf': (best_acc, best_clf_report, best_conf_matrix, train_loss, val_loss, train_acc, val_acc),
+            'perf': (best_acc, best_clf_report, best_conf_matrix, train_loss, val_loss),
             'state_dict': model.state_dict(),
             'optimizer': optimizer.state_dict(),
         }, best_model, opt.exp_dir, cfg["train"]["save_all_epochs"])

@@ -34,6 +34,8 @@ data:
         p: 0.05
         distortion_scale: 0.5
         fill: 127
+    cutmix_mixup:
+      prob: 0.5
 model:
   backbone:
     name: mobilenetv3

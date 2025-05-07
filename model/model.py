@@ -48,7 +48,7 @@ if __name__ == "__main__":
     import yaml
     import torch
 
-    with open("./configs/cifar100_mobilenetv3/cifar100.yaml", "r") as stream:
+    with open("./configs/cifar100/cifar100_mobilenetv3_small.yaml", "r") as stream:
         try:
             cfg = yaml.safe_load(stream)
         except yaml.YAMLError as e:
