@@ -52,6 +52,8 @@ model:
       activation: hardswish
       dropout_rate: 0.2
 train:
+  ema:
+    decay_rate: 0.999
   compile: default
   save_all_epochs: false
   auto_resume: true

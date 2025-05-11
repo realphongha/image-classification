@@ -49,6 +49,8 @@ model:
     linear:
       dropout_rate: 0.0
 train:
+  ema:
+    decay_rate: 0.9999
   compile: default
   save_all_epochs: false
   auto_resume: true

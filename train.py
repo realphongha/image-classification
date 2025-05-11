@@ -38,7 +38,7 @@ def draw_confusion_matrix(output_path, conf_matrix):
     plt.close("all")
 
 
-def train(model, criterion, optimizer, lr_scheduler, train_loader, device):
+def train(model, ema_model, criterion, optimizer, lr_scheduler, train_loader, device):
     logging.info("Training...")
     model.train()
     losses = []
@@ -56,6 +56,7 @@ def train(model, criterion, optimizer, lr_scheduler, train_loader, device):
         losses.append(loss.item())
         loss.backward()
         optimizer.step()
+        ema_model.update_parameters(model)
 
     mean_loss = np.mean(losses)
     logging.info(f"Loss: {mean_loss}")
@@ -198,6 +199,17 @@ def main(cfg, opt):
         logging.info(f"Compiling model in {compile} mode...")
         model = torch.compile(model, mode=compile)
 
+    # EMA model
+    ema_decay_rate = cfg["train"]["ema"]["decay_rate"]
+    ema_model = torch.optim.swa_utils.AveragedModel(
+        model,
+        multi_avg_fn=torch.optim.swa_utils.get_ema_multi_avg_fn(ema_decay_rate),
+        device=device
+    )
+    if os.path.isfile(os.path.join(opt.exp_dir, "ema.pth")):
+        logging.info("Loading EMA model from %s..." % os.path.join(opt.exp_dir, "ema.pth"))
+        ema_model.load_state_dict(torch.load(os.path.join(opt.exp_dir, "ema.pth")))
+
     # train loop
     for epoch in range(begin_epoch, epochs):
         logging.info(f"EPOCH {epoch}:")
@@ -209,7 +221,7 @@ def main(cfg, opt):
             model = torch.compile(model, mode=compile)
 
         # trains
-        loss = train(model, criterion, optimizer, lr_scheduler,
+        loss = train(model, ema_model, criterion, optimizer, lr_scheduler,
                      train_loader, device)
         train_loss.append(loss)
 
@@ -246,6 +258,15 @@ def main(cfg, opt):
             'optimizer': optimizer.state_dict(),
         }, best_model, opt.exp_dir, cfg["train"]["save_all_epochs"])
         draw_confusion_matrix(opt.exp_dir, best_conf_matrix)
+        torch.save(ema_model.state_dict(), os.path.join(opt.exp_dir, "ema.pth"))
+
+        if epoch == epochs - 1:
+            ema_model.train()
+            torch.optim.swa_utils.update_bn(train_loader, ema_model, device=device)
+            logging.info("Evaluating EMA model...")
+            ema_f1, ema_acc, ema_clf_report, ema_loss, ema_conf_matrix = evaluate(
+                ema_model, criterion, val_loader, device)
+            torch.save(ema_model.state_dict(), os.path.join(opt.exp_dir, "ema.pth"))
 
     logging.info("Done training!")
     logging.info("Best %s: %.4f" % (metric, best_acc))

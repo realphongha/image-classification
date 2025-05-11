@@ -66,5 +66,5 @@ See `infer.py`
 - Cosine
 
 ## Sample configs for datasets:
-- CIFAR100
-- ImageNette
+- CIFAR100 (fine-tuning on pretrained backbone)
+- ImageNette (training from scratch)
