@@ -1,0 +1,77 @@
+gpus: "1"
+workers: 2
+device: "cuda"
+
+cudnn:
+  benchmark: true
+  deterministic: true
+  enabled: true
+
+data:
+  name: imagenette
+  input_w: 224
+  input_h: 224
+  cls: ['tench', 'English springer', 'cassette player', 'chain saw', 'church', 'French horn', 'garbage truck', 'gas pump', 'golf ball', 'parachute']
+  train_path: /home/phonghh/datasets/classification/imagenette/train
+  val_path: /home/phonghh/datasets/classification/imagenette/val
+  test_path: /home/phonghh/datasets/classification/imagenette/val
+  img_ext: [".jpg",]
+  augmentation:
+    autoaug:
+      prob: 1.0
+      args:
+        fill: 127
+    grayscale:
+      prob: 0.05
+    gaussian_blur:
+      prob: 0.05
+      args:
+        kernel_size: [5, 9]
+        sigma: [0.1, 5.0]
+    perspective:
+      args:
+        p: 0.05
+        distortion_scale: 0.5
+        fill: 127
+model:
+  backbone:
+    name: vit
+    vit:
+      model_name: vit_b_16
+      pretrained: false
+  neck:
+    name:
+  head:
+    name: linear
+    linear:
+      dropout_rate: 0.0
+train:
+  ema:
+    decay_rate: 0.999
+  compile: default
+  save_all_epochs: false
+  auto_resume: true
+  pretrained:
+  epochs: 200
+  batch_size: 64
+  freeze:
+  unfreeze_after:
+  optimizer:
+    name: adamw
+    adamw:
+      lr: 0.0003
+      weight_decay: 0.05
+  lr_scheduler:
+    name: cosine
+    warmup: 10 
+    cosine:
+      cycles: 0.5
+  loss:
+    name: ce
+    ce:
+      weighted: false
+  early_stop:
+
+test:
+  metric: accuracy
+  batch_size: 32

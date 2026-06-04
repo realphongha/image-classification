@@ -1,0 +1,85 @@
+gpus: "1"
+workers: 2
+device: "cuda"
+
+cudnn:
+  benchmark: true
+  deterministic: true
+  enabled: true
+
+data:
+  name: market1203_personview
+  input_w: 128
+  input_h: 256
+  cls: ['front', 'side', 'back']
+  train_path:
+  - /home/phonghh/datasets/prj33/Market1203_orient_3classes_split/train
+  val_path:
+  - /home/phonghh/datasets/prj33/Market1203_orient_3classes_split/val
+  test_path:
+  - /home/phonghh/datasets/prj33/Market1203_orient_3classes_split/val
+  img_ext: [".jpg",]
+  augmentation:
+    autoaug:
+      prob: 1.0
+      args:
+        fill: 127
+    grayscale:
+      prob: 0.05
+    gaussian_blur:
+      prob: 0.05
+      args:
+        kernel_size: [5, 9]
+        sigma: [0.1, 5.0]
+    perspective:
+      args:
+        p: 0.05
+        distortion_scale: 0.5
+        fill: 127
+    cutmix_mixup:
+      prob: 0.5
+model:
+  backbone:
+    name: mobilenetv3
+    mobilenetv3:
+      size: small
+      pretrained: true
+  neck:
+    name: gap
+    gap:
+  head:
+    name: stacked_linear
+    stacked_linear:
+      hidden_channel: 1024  # 1024 - small, 1280 - large
+      activation: hardswish
+      dropout_rate: 0.2
+train:
+  ema:
+    decay_rate: 0.999
+  compile: default
+  save_all_epochs: false
+  auto_resume: true
+  pretrained:
+  epochs: 30
+  batch_size: 64
+  freeze:
+  unfreeze_after:
+  optimizer:
+    name: adamw
+    adamw:
+      lr: 0.001
+      weight_decay: 0.0001
+  lr_scheduler:
+    name: cosine
+    warmup: 3
+    cosine:
+      cycles: 0.5
+  loss:
+    name: ce
+    ce:
+      weighted: false
+  early_stop:
+
+test:
+  metric: accuracy
+  batch_size: 32
