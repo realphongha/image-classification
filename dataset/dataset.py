@@ -42,6 +42,8 @@ class Dataset(torch.utils.data.Dataset):
         self.mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
         self.std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
 
+        self.aug = get_aug(self.cfg, self.is_train)
+
     def __len__(self):
         return len(self.labels)
 
@@ -50,8 +52,7 @@ class Dataset(torch.utils.data.Dataset):
         label = self.labels[index]
         raw_img = Image.open(fp)
         raw_img = raw_img.convert('RGB')
-        aug = get_aug(self.cfg, self.is_train)
-        img = aug(raw_img)
+        img = self.aug(raw_img)
         img = np.array(img).astype(np.float32)
         # import os
         # import cv2

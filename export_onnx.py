@@ -15,8 +15,6 @@ def to_numpy(tensor):
 
 
 def main(opt, cfg):
-    if not torch.cuda.is_available():
-        device = 'cpu'
     device = torch.device(opt.device)
     model = ClassificationModel(cfg, training=False)
     model.to(device)

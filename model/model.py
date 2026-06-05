@@ -12,7 +12,7 @@ class ClassificationModel(nn.Module):
         self.backbone, self.in_channels = get_backbone(cfg)
         self.neck = get_neck(cfg)
         self.head = get_head(cfg, self.in_channels)
-        self.training = training
+        self._is_training = training
 
     def remove_fc(self):
         self.head[-1] = nn.Identity()

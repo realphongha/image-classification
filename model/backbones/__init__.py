@@ -3,6 +3,7 @@ from .shufflenetv2 import *
 from .resnet import *
 from .vit import *
 from .efficientnetv2 import *
+from .convnextv2 import *
 
 
 def get_backbone(configs):
@@ -17,6 +18,8 @@ def get_backbone(configs):
         return get_vit(**configs["model"]["backbone"][name])
     elif name == "efficientnetv2":
         return get_efficientnet_v2(**configs["model"]["backbone"][name])
+    elif name == "convnext_v2":
+        return get_convnext_v2(**configs["model"]["backbone"][name])
     else:
         raise ValueError(f"Unsupported backbone name: {name}")
 

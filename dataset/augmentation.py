@@ -1,8 +1,9 @@
+import copy
 import random
 import math
 import numpy as np
-import torchvision.transforms as T
-import torchvision.transforms.functional as F
+import torchvision.transforms.v2 as T
+import torchvision.transforms.v2.functional as F
 
 
 def get_aug(cfg, is_train):
@@ -10,12 +11,12 @@ def get_aug(cfg, is_train):
     pipeline = []
     if is_train:
         if aug_cfg.get("autoaug", None) and aug_cfg["autoaug"]["prob"] > random.random():
-            if "policy" in aug_cfg["autoaug"]["args"]:
-                policy = aug_cfg["autoaug"]["args"]["policy"]
+            aa_args = copy.deepcopy(aug_cfg["autoaug"]["args"])
+            if "policy" in aa_args:
+                policy = aa_args["policy"]
                 if isinstance(policy, str):
-                    policy = eval("T.autoaugment.AutoAugmentPolicy." + policy)
-                    aug_cfg["autoaug"]["args"]["policy"] = policy
-            pipeline.append(T.AutoAugment(**aug_cfg["autoaug"]["args"]))
+                    aa_args["policy"] = eval("T.AutoAugmentPolicy." + policy)
+            pipeline.append(T.AutoAugment(**aa_args))
         if aug_cfg.get("gaussian_blur", None) and aug_cfg["gaussian_blur"]["prob"] > random.random():
             pipeline.append(T.GaussianBlur(**aug_cfg["gaussian_blur"]["args"]))
         if aug_cfg.get("grayscale", None) and aug_cfg["grayscale"]["prob"] > random.random():

@@ -6,11 +6,13 @@ class StackedLinear(nn.Module):
                  activation="relu", dropout_rate=0.0):
         super(StackedLinear, self).__init__()
         self.linear1 = nn.Linear(in_features, hidden_channel)
-        assert activation in ("relu", "hardswish")
+        assert activation in ("relu", "hardswish", "gelu")
         if activation == "relu":
             self.activation = nn.ReLU(inplace=True)
         elif activation == "hardswish":
             self.activation = nn.Hardswish(inplace=True)
+        elif activation == "gelu":
+            self.activation = nn.GELU()
         if dropout_rate > 0.0:
             self.dropout = nn.Dropout(p=dropout_rate, inplace=True)
         else:

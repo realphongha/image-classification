@@ -1,6 +1,7 @@
 gpus: "0"
 workers: 2
 device: "cuda"
+seed: 42
 
 cudnn:
   benchmark: true
@@ -55,6 +56,7 @@ train:
   ema:
     decay_rate: 0.999
   compile: default
+  amp: true
   save_all_epochs: false
   auto_resume: true
   pretrained:
@@ -67,6 +69,7 @@ train:
     adamw:
       lr: 0.001
       weight_decay: 0.0001
+    backbone_lr_mult: 0.01
   lr_scheduler:
     name: cosine
     warmup: 10 

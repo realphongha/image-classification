@@ -10,6 +10,7 @@ def main(cfg, opt):
     logging.info("Configs:")
     logging.info(cfg)
 
+    num_classes = len(cfg["data"]["cls"])
     model = ClassificationModel(cfg, training=False)
     model.to(device)
 
@@ -26,10 +27,8 @@ def main(cfg, opt):
     assert pretrained_path
     load_checkpoint(model, pretrained_path, strict=True)
 
-    # evaluates
-    f1, acc, clf_report, loss, conf_matrix = evaluate(
-        model, criterion, test_loader, device)
-    draw_confusion_matrix(opt.exp_dir, conf_matrix)
+    f1, acc, loss, _ = evaluate(
+        model, criterion, test_loader, device, num_classes)
 
     logging.info("Done evaluating!")
 
@@ -43,4 +42,3 @@ if __name__ == "__main__":
             logging.error(exc)
             quit()
     main(cfg, opt)
-
