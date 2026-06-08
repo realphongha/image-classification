@@ -26,10 +26,11 @@ from utils.log import setup_logger
 from utils.weights import load_checkpoint, save_checkpoint
 
 
-def draw_confusion_matrix(output_path, conf_matrix):
-    fig = plt.figure()
-    df_cm = pd.DataFrame(
-        conf_matrix, range(conf_matrix.shape[0]), range(conf_matrix.shape[0]))
+def draw_confusion_matrix(output_path, conf_matrix, class_names=None):
+    fig = plt.figure(figsize=(8, 6))
+    if class_names is None:
+        class_names = range(conf_matrix.shape[0])
+    df_cm = pd.DataFrame(conf_matrix, class_names, class_names)
     sn.set(font_scale=1.4)
     sn.heatmap(df_cm, annot=True, annot_kws={"size": 8}, fmt='.3f')
     fig.savefig(os.path.join(output_path, 'confusion_matrix.png'),
@@ -80,6 +81,7 @@ def evaluate(model, criterion, val_loader, device, num_classes):
 
     acc_metric = torchmetrics.classification.MulticlassAccuracy(num_classes=num_classes).to(device)
     f1_metric = torchmetrics.classification.MulticlassF1Score(num_classes=num_classes).to(device)
+    conf_metric = torchmetrics.classification.MulticlassConfusionMatrix(num_classes=num_classes).to(device)
 
     with torch.no_grad():
         for data, label in tqdm(val_loader):
@@ -91,15 +93,15 @@ def evaluate(model, criterion, val_loader, device, num_classes):
             preds = torch.argmax(output, dim=1)
             acc_metric.update(preds, label)
             f1_metric.update(preds, label)
+            conf_metric.update(preds, label)
 
     mean_loss = np.mean(losses)
     acc = acc_metric.compute().item()
     f1 = f1_metric.compute().item()
+    conf_matrix = conf_metric.compute().cpu().numpy()
     logging.info(f"Loss: {mean_loss}")
     logging.info(f"Accuracy: {acc}")
     logging.info(f"Macro avg F1 score: {f1}")
-
-    conf_matrix = None
 
     return f1, acc, mean_loss, conf_matrix
 
@@ -248,7 +250,7 @@ def main(cfg, opt):
         ema_model.train()
         torch.optim.swa_utils.update_bn(train_loader, ema_model, device=device)
         logging.info(f"Evaluating the EMA model...")
-        ema_f1, ema_acc, ema_loss, _ = evaluate(
+        ema_f1, ema_acc, ema_loss, conf_matrix = evaluate(
             ema_model, criterion, val_loader, device, num_classes)
         if metric == "accuracy" and ema_acc > best_acc:
             best_acc = ema_acc
@@ -276,6 +278,7 @@ def main(cfg, opt):
         }, best_model, opt.exp_dir, cfg["train"]["save_all_epochs"])
         torch.save(ema_model.state_dict(), os.path.join(opt.exp_dir, "ema.pth"))
 
+    draw_confusion_matrix(opt.exp_dir, conf_matrix, cfg["data"]["cls"])
     logging.info("Done training!")
     logging.info("Best %s: %.4f" % (metric, best_acc))
 

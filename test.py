@@ -27,8 +27,9 @@ def main(cfg, opt):
     assert pretrained_path
     load_checkpoint(model, pretrained_path, strict=True)
 
-    f1, acc, loss, _ = evaluate(
+    f1, acc, loss, conf_matrix = evaluate(
         model, criterion, test_loader, device, num_classes)
+    draw_confusion_matrix(opt.exp_dir, conf_matrix, cfg["data"]["cls"])
 
     logging.info("Done evaluating!")
 
