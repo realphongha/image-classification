@@ -133,7 +133,7 @@ def get_aug(cfg: Dict[str, Any], is_train: bool) -> T.Compose:
     # 4. SPATIAL HARMONIZATION & RESIZING
     # ==========================================
     # If RandomResizedCrop wasn't active, fallback to safe aspect padding
-    if not aug_cfg.get("random_resized_crop", {}).get("enabled", False):
+    if not aug_cfg.get("random_resized_crop", {}).get("enabled", False) or not is_train:
         pipeline.append(ResizeWithPad(data_cfg["input_w"], data_cfg["input_h"]))
 
     # ==========================================
