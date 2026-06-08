@@ -1,5 +1,6 @@
 import logging
 import os
+import cv2
 from collections import Counter
 
 import torch
@@ -39,27 +40,33 @@ class Dataset(torch.utils.data.Dataset):
         logging.info("Classes count:")
         logging.info(lbl_counter)
 
-        self.mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
-        self.std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
+        self.mean = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
+        self.std = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
 
         self.aug = get_aug(self.cfg, self.is_train)
 
     def __len__(self):
         return len(self.labels)
 
+    def _train_data_to_cv2_img(self, data):
+        #  for debug only
+        tensor = data.detach().cpu()
+        img = tensor * self.std + self.mean
+        img = torch.clamp(img * 255, 0, 255).numpy().astype(np.uint8)
+        img = img.transpose(1, 2, 0)
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        return img
+
     def __getitem__(self, index):
         fp = self.data[index]
         label = self.labels[index]
         raw_img = Image.open(fp)
         raw_img = raw_img.convert('RGB')
-        img = self.aug(raw_img)
-        img = np.array(img).astype(np.float32)
-        # import os
-        # import cv2
+        data = self.aug(raw_img)
+        # DEBUG ONLY
+        # img = self._train_data_to_cv2_img(data)
         # os.makedirs("runs/aug", exist_ok=True)
         # cv2.imwrite(f"runs/aug/{index}-{self.cls[label]}.jpg", img)
-        img = (img/255.0 - self.mean) / self.std
-        img = img.transpose([2, 0, 1])
-        data = torch.Tensor(img)
+        # DEBUG ONLY
         return data, label
 
