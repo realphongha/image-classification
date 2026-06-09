@@ -1,4 +1,4 @@
-gpus: "0"
+gpus: "2"
 workers: 2
 device: "cuda"
 seed: 42
@@ -18,48 +18,48 @@ data:
   test_path: ./data/imagenette/val
   img_ext: [".jpg",]
   augmentation:
-    policy_type: "trivial"
+    policy_type: "no"
 
     random_resized_crop:
       enabled: true
       scale: [0.6, 1.0]
-      ratio: [0.9, 1.1]
+      ratio: [0.75, 1.333]
 
     horizontal_flip_p: 0.5
-    vertical_flip_p: 0.0
 
     random_rotation:
-      prob: 0.15
+      prob: 0.1
       degrees: 15
 
     color_jitter:
-      prob: 0.2
+      prob: 0.3
       args:
-        brightness: 0.3
-        contrast: 0.3
-        saturation: 0.3
+        brightness: 0.4
+        contrast: 0.4
+        saturation: 0.4
+        hue: 0.1
+
+    perspective:
+      prob: 0.05
+      args:
+        p: 0.05
+        distortion_scale: 0.5
+        fill: 127
 
     gaussian_blur:
-      prob: 0.1
+      prob: 0.05
       args:
         kernel_size: 3
-        sigma: [0.1, 2.0]
-
-    solarize:
-      prob: 0.05
-      threshold: 128
-
-    equalize:
-      prob: 0.05
+        sigma: [0.1, 1.0]
 
     random_erasing:
-      prob: 0.25
+      prob: 0.3
       args:
         scale: [0.02, 0.25]
         value: "random"
 
     cutmix_mixup:
-      prob: 0.5
+      prob: 0.3
 model:
   backbone:
     name: mobilenetv3
@@ -83,19 +83,19 @@ train:
   save_all_epochs: false
   auto_resume: true
   pretrained:
-  epochs: 200
+  epochs: 100
   batch_size: 64
   freeze:
   unfreeze_after:
   optimizer:
-    name: adamw
-    adamw:
+    name: lion
+    lion:
       lr: 0.001
-      weight_decay: 0.0001
-    backbone_lr_mult: 0.01
+      weight_decay: 0.05
+    backbone_lr_mult: 1.0
   lr_scheduler:
     name: cosine
-    warmup: 10 
+    warmup: 5
     cosine:
       cycles: 0.5
   loss:

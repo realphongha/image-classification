@@ -89,7 +89,7 @@ def get_aug(cfg: Dict[str, Any], is_train: bool) -> T.Compose:
             args = aug_cfg["perspective"].get("args", {})
             pipeline.append(T.RandomPerspective(
                 distortion_scale=args.get("distortion_scale", 0.5),
-                p=args.get("p", 0.5),
+                p=aug_cfg["perspective"]["prob"],
                 fill=args.get("fill", 127)
             ))
 

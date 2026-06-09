@@ -1,4 +1,4 @@
-gpus: "1"
+gpus: "0"
 workers: 2
 device: "cuda"
 seed: 42
@@ -9,19 +9,23 @@ cudnn:
   enabled: true
 
 data:
-  name: imagenette
-  input_w: 224
-  input_h: 224
-  cls: ['tench', 'English springer', 'cassette player', 'chain saw', 'church', 'French horn', 'garbage truck', 'gas pump', 'golf ball', 'parachute']
-  train_path: /home/phonghh/datasets/classification/imagenette/train
-  val_path: /home/phonghh/datasets/classification/imagenette/val
-  test_path: /home/phonghh/datasets/classification/imagenette/val
+  name: market1203_personview
+  input_w: 128
+  input_h: 256
+  cls: ['front', 'side', 'back']
+  train_path:
+  - /home/phonghh/datasets/prj33/Market1203_orient_3classes_split/train
+  val_path:
+  - /home/phonghh/datasets/prj33/Market1203_orient_3classes_split/val
+  test_path:
+  - /home/phonghh/datasets/prj33/Market1203_orient_3classes_split/val
   img_ext: [".jpg",]
+  
   augmentation:
     policy_type: "trivial"
 
     random_resized_crop:
-      enabled: true
+      enabled: false
       scale: [0.6, 1.0]
       ratio: [0.9, 1.1]
 
@@ -60,18 +64,22 @@ data:
 
     cutmix_mixup:
       prob: 0.5
+
 model:
   backbone:
-    name: vit
-    vit:
-      model_name: vit_b_16
-      pretrained: false
+    name: mobilenetv3
+    mobilenetv3:
+      size: large
+      pretrained: true
   neck:
-    name:
+    name: gap
+    gap:
   head:
-    name: linear
-    linear:
-      dropout_rate: 0.0
+    name: stacked_linear
+    stacked_linear:
+      hidden_channel: 1280
+      activation: hardswish
+      dropout_rate: 0.2
 train:
   ema:
     decay_rate: 0.999
@@ -80,19 +88,23 @@ train:
   save_all_epochs: false
   auto_resume: true
   pretrained:
-  epochs: 200
+  epochs: 30
   batch_size: 64
   freeze:
-  unfreeze_after:
+  - backbone
+  unfreeze_after: 5
   optimizer:
-    name: adamw
+    name: lion
     adamw:
-      lr: 0.0003
+      lr: 0.001
       weight_decay: 0.05
-    backbone_lr_mult: 0.01
+    lion:
+      lr: 0.0001
+      weight_decay: 0.5
+    backbone_lr_mult: 0.1
   lr_scheduler:
     name: cosine
-    warmup: 10 
+    warmup: 8
     cosine:
       cycles: 0.5
   loss:
