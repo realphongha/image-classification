@@ -1,4 +1,3 @@
-gpus: "2"
 workers: 2
 device: "cuda"
 seed: 42
