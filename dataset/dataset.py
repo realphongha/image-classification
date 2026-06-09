@@ -64,9 +64,9 @@ class Dataset(torch.utils.data.Dataset):
         raw_img = raw_img.convert('RGB')
         data = self.aug(raw_img)
         # DEBUG ONLY
-        img = self._train_data_to_cv2_img(data)
-        os.makedirs("runs/aug", exist_ok=True)
-        cv2.imwrite(f"runs/aug/{index}-{self.cls[label]}.jpg", img)
+        # img = self._train_data_to_cv2_img(data)
+        # os.makedirs("runs/aug", exist_ok=True)
+        # cv2.imwrite(f"runs/aug/{index}-{self.cls[label]}.jpg", img)
         # DEBUG ONLY
         return data, label
 
